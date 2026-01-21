@@ -11,7 +11,7 @@ import InwardChallanModel from "../modules/forms/Transition/models/InwardChallan
 import MaterialConsumptionModel from "../modules/forms/Transition/models/MaterialConsumption.model.js";
 import ReturnMaterialModel from "../modules/forms/Transition/models/ReturnMaterial.model.js";
 import VendorBillModel from "../modules/forms/Transition/models/VendorBill.model.js";
-import VendorIssueMaterialModel from "../modules/forms/Transition/models/VendorIssueMaterial.model.js";
+import VendorIssueMaterialModel from "../modules/forms/Transition/models/VendorissueMaterial.model.js";
 import ProfileModel from "../modules/forms/Profile/models/profile.model.js";
 
 // Setup
