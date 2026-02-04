@@ -8,10 +8,10 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   protocol: "postgres",
   logging: false,
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false,
-    },
+  ssl: {
+    require: true,
+    rejectUnauthorized: false,
+  },
   },
 });
 
@@ -46,11 +46,9 @@ export const connectDB = async () => {
     await sequelize.sync({ alter: true }); // 👈 THIS LINE FIXES EVERYTHING
     console.log("✅ All models synced");
   } catch (error) {
-  console.error("❌ DB connection failed:", error);
-  process.exit(1);
-}
+    console.error("❌ DB connection failed:", error);
+    process.exit(1);
+  }
 };
-
-
 
 export default sequelize;
