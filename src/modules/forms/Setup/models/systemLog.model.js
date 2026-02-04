@@ -23,9 +23,29 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
 
+      recordId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      changedFields: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+
       level: {
         type: DataTypes.ENUM("Info", "Warning", "Error"),
         allowNull: false,
+      },
+
+      status: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      durationMs: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
       },
 
       ip: {

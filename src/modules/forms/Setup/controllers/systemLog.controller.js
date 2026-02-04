@@ -7,13 +7,45 @@ const { SystemLog } = db;
  */
 export const createSystemLog = async (req, res) => {
   try {
-    const { user, module, action, level, ip } = req.body;
+    const {
+      user,
+      module,
+      action,
+      level,
+      ip,
+      recordId,
+      changedFields,
+      status,
+      durationMs,
+      duration,
+    } = req.body;
+
+    const normalizedLevel = level || "Info";
+    const normalizedStatus =
+      status ||
+      (normalizedLevel === "Error"
+        ? "ERROR"
+        : normalizedLevel === "Warning"
+          ? "WARNING"
+          : "SUCCESS");
+
+    let normalizedDurationMs = durationMs;
+    if (normalizedDurationMs == null && duration != null) {
+      const asNumber = Number(duration);
+      if (!Number.isNaN(asNumber)) {
+        normalizedDurationMs = asNumber;
+      }
+    }
 
     const log = await SystemLog.create({
       user,
       module,
       action,
-      level,
+      recordId,
+      changedFields,
+      level: normalizedLevel,
+      status: normalizedStatus,
+      durationMs: normalizedDurationMs,
       ip,
       date: new Date(),
     });

@@ -3,6 +3,11 @@ import sequelize from "../config/database.js";
 
 // Core models
 import UserModel from "./user.model.js";
+import RoleModel from "../modules/roles/role.model.js";
+import PermissionModel from "../modules/roles/rolePermission.model.js";
+import RolePermissionJoinModel from "../modules/roles/rolePermissionJoin.model.js";
+import UserRoleModel from "../modules/roles/userRole.model.js";
+import UserPermissionModel from "../modules/roles/userPermission.model.js";
 
 // O2C & Transition
 import OrderBookingModel from "../modules/forms/O2C/models/orderBooking.model.js";
@@ -35,14 +40,20 @@ import ItemGroupModel from "../modules/forms/Master/models/itemGroup.model.js";
 import EmployeeModel from "../modules/forms/Master/models/employees.model.js";
 import WarehouseModel from "../modules/forms/Master/models/warehouse.model.js";
 import VendorModel from "../modules/forms/Master/models/vendor.model.js";
+import NotificationModel from "../modules/notification/model/notification.model.js";
 
 const db = {};
 
-db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
 // Core
 db.User = UserModel(sequelize, Sequelize.DataTypes);
+db.Role = RoleModel(sequelize, Sequelize.DataTypes);
+db.Permission = PermissionModel(sequelize, Sequelize.DataTypes);
+db.RolePermission = RolePermissionJoinModel(sequelize, Sequelize.DataTypes);
+db.UserRole = UserRoleModel(sequelize, Sequelize.DataTypes);
+db.UserPermission = UserPermissionModel(sequelize, Sequelize.DataTypes);
+db.Notification = NotificationModel(sequelize, Sequelize.DataTypes);
 
 // O2C & Transition, profile
 db.OrderBooking = OrderBookingModel(sequelize, Sequelize.DataTypes);
@@ -75,5 +86,64 @@ db.ItemGroup = ItemGroupModel(sequelize, Sequelize.DataTypes);
 db.Employee = EmployeeModel(sequelize, Sequelize.DataTypes);
 db.Warehouse = WarehouseModel(sequelize, Sequelize.DataTypes);
 db.Vendor = VendorModel(sequelize, Sequelize.DataTypes);
+
+
+// =======================
+// RBAC ASSOCIATIONS
+// =======================
+
+// User ↔ Role
+db.User.belongsTo(db.Role, { foreignKey: "roleId" });
+db.Role.hasMany(db.User, { foreignKey: "roleId" });
+
+// Role ↔ Permission (M2M)
+db.Role.belongsToMany(db.Permission, {
+  through: db.RolePermission,
+  foreignKey: "roleId",
+  otherKey: "permissionId",
+  timestamps: false,
+});
+
+db.Permission.belongsToMany(db.Role, {
+  through: db.RolePermission,
+  foreignKey: "permissionId",
+  otherKey: "roleId",
+  timestamps: false,
+});
+
+// User â†” Permission (M2M) - optional overrides
+db.User.belongsToMany(db.Permission, {
+  through: db.UserPermission,
+  as: "UserPermissions",
+  foreignKey: "userId",
+  otherKey: "permissionId",
+  timestamps: false,
+});
+
+db.Permission.belongsToMany(db.User, {
+  through: db.UserPermission,
+  as: "UsersWithPermission",
+  foreignKey: "permissionId",
+  otherKey: "userId",
+  timestamps: false,
+});
+
+// User â†” Role (M2M) - optional multi-role support
+db.User.belongsToMany(db.Role, {
+  through: db.UserRole,
+  as: "roles",
+  foreignKey: "userId",
+  otherKey: "roleId",
+  timestamps: false,
+});
+
+db.Role.belongsToMany(db.User, {
+  through: db.UserRole,
+  as: "users",
+  foreignKey: "roleId",
+  otherKey: "userId",
+  timestamps: false,
+});
+
 
 export default db;

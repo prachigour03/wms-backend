@@ -5,19 +5,20 @@ const { OrderBooking } = db;
 /* ===================== CREATE ORDER ===================== */
 export const createOrder = async (req, res) => {
   try {
-    const { tranditionId, customer, date, location, finalRate } = req.body;
+    const { tranditionId, customer, itemName, date, location, finalRate } = req.body;
 
     // Validation
-    if (!tranditionId || !customer) {
+    if (!tranditionId || !customer || !itemName) {
       return res.status(400).json({
         success: false,
-        message: "tranditionId and customer are required",
+        message: "tranditionId, customer, and itemName are required",
       });
     }
 
     const order = await OrderBooking.create({
       tranditionId,
       customer,
+      itemName,
       date,
       location,
       finalRate,
@@ -81,7 +82,7 @@ export const getOrderById = async (req, res) => {
 /* ===================== UPDATE ORDER ===================== */
 export const updateOrder = async (req, res) => {
   try {
-    const { tranditionId, customer, date, location, finalRate } = req.body;
+    const { tranditionId, customer, itemName, date, location, finalRate } = req.body;
 
     const order = await OrderBooking.findByPk(req.params.id);
 
@@ -95,6 +96,7 @@ export const updateOrder = async (req, res) => {
     await order.update({
       tranditionId,
       customer,
+      itemName,
       date,
       location,
       finalRate,

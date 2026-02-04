@@ -8,8 +8,8 @@ import {
 } from "../controllers/profile.controller.js";
 
 import { uploadProfileImage } from "../../../../utils/upload.js";
-import { protect } from "../../../../middleware/auth.middleware.js";
-import { roleMiddleware } from "../../../../middleware/role.middleware.js";
+import { authenticateJWT } from "../../../../middleware/auth.middleware.js";
+import { authorizePermission } from "../../../../middleware/authorize.middleware.js";
 
 const router = express.Router();
 
@@ -18,8 +18,8 @@ const router = express.Router();
 ================================ */
 router.post(
   "/",
-  protect,
-  roleMiddleware("admin"),
+  authenticateJWT,
+  authorizePermission("admin_profiles:create"),
   uploadProfileImage.single("profileImage"),
   createAdminProfile
 );
@@ -30,8 +30,8 @@ router.post(
 ================================ */
 router.get(
   "/me",
-  protect,
-  roleMiddleware("admin", "user"),
+  authenticateJWT,
+  authorizePermission("profile:read"),
   getMyProfile
 );
 
@@ -41,8 +41,8 @@ router.get(
 ================================ */
 router.put(
   "/:id",
-  protect,
-  roleMiddleware("admin", "user"),
+  authenticateJWT,
+  authorizePermission("profile:update"),
   uploadProfileImage.single("profileImage"),
   updateAdminProfile
 );
@@ -52,8 +52,8 @@ router.put(
 ================================ */
 router.get(
   "/:id",
-  protect,
-  roleMiddleware("admin"),
+  authenticateJWT,
+  authorizePermission("admin_profiles:read"),
   getAdminProfileById
 );
 
@@ -62,8 +62,8 @@ router.get(
 ================================ */
 router.delete(
   "/:id",
-  protect,
-  roleMiddleware("admin"),
+  authenticateJWT,
+  authorizePermission("admin_profiles:delete"),
   deleteAdminProfile
 );
 

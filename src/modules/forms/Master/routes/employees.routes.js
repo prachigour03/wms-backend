@@ -1,7 +1,7 @@
 import exprees from "express";
 import {
   createEmployee,   
-    getEmployees,
+    getAllEmployees,
     getEmployeeById,
     updateEmployee,
     deleteEmployee,
@@ -10,7 +10,7 @@ import {
 const router = exprees.Router();
 
 router.post("/", createEmployee);
-router.get("/", getEmployees);
+router.get("/", getAllEmployees);
 router.get("/:id", getEmployeeById);
 router.put("/:id", updateEmployee);
 router.delete("/:id", deleteEmployee);  

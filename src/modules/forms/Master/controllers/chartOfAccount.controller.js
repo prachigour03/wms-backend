@@ -51,7 +51,8 @@ export const createChartOfAccount = async (req, res) => {
     });
 
     res.status(201).json({ success: true, data });
-  } catch (error) {
+    // eslint-disable-next-line no-unused-vars
+  } catch (_error) {
     res.status(500).json({
       success: false,
       message: "Failed to create account",
@@ -78,7 +79,8 @@ export const getChartOfAccounts = async (req, res) => {
       total: data.count,
       data: data.rows,
     });
-  } catch (error) {
+    // eslint-disable-next-line no-unused-vars
+  } catch (_error) {
     res.status(500).json({
       success: false,
       message: "Failed to fetch accounts",
@@ -104,7 +106,8 @@ export const getChartOfAccountById = async (req, res) => {
     }
 
     res.status(200).json({ success: true, data });
-  } catch (error) {
+    // eslint-disable-next-line no-unused-vars
+  } catch (_error) {
     res.status(500).json({ success: false, message: "Fetch failed" });
   }
 };
@@ -131,7 +134,8 @@ export const updateChartOfAccount = async (req, res) => {
       message: "Chart Of Account updated successfully",
       data: account,
     });
-  } catch (error) {
+    // eslint-disable-next-line no-unused-vars
+  } catch (_error) {
     res.status(500).json({ success: false, message: "Update failed" });
   }
 };
@@ -156,7 +160,8 @@ export const deleteChartOfAccount = async (req, res) => {
       success: true,
       message: "Chart Of Account deactivated successfully",
     });
-  } catch (error) {
+    // eslint-disable-next-line no-unused-vars
+  } catch (_error) {
     res.status(500).json({
       success: false,
       message: "Delete failed",

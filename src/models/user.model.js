@@ -1,5 +1,3 @@
-import bcrypt from "bcryptjs";
-
 export default (sequelize, DataTypes) => {
   const User = sequelize.define("User", {
     id: {
@@ -29,15 +27,18 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
-    role: {
-      type: DataTypes.STRING,
-      defaultValue: "user",
+    roleId: {
+      type: DataTypes.UUID,
+      allowNull: false,
     },
-  });
-
-  User.beforeCreate(async (user) => {
-    user.password = await bcrypt.hash(user.password, 10);
+  },
+  {
+    tableName: "users",        // 👈 EXACT DB table name
+    freezeTableName: true,     // 👈 Sequelize pluralization OFF
+    timestamps: true,
   });
 
   return User;
+
+  
 };

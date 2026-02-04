@@ -3,7 +3,7 @@ import db from "../../../../models/index.js";
 const { PaymentTeam } = db;
 
 /**
- * CREATE Payment Team
+ * CREATE Payment Terms
  */
 export const createPaymentTeam = async (req, res) => {
   const { teamCode, teamName, contactPerson, email, status } = req.body;
@@ -27,7 +27,7 @@ export const createPaymentTeam = async (req, res) => {
     res.status(201).json({
       success: true,
       data: paymentTeam,
-      message: "Payment Team created successfully",
+      message: "Payment Terms created successfully",
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -35,7 +35,7 @@ export const createPaymentTeam = async (req, res) => {
 };
 
 /**
- * GET ALL Payment Teams
+ * GET ALL Payment Termss
  */
 export const getPaymentTeams = async (req, res) => {
   try {
@@ -53,7 +53,7 @@ export const getPaymentTeams = async (req, res) => {
 };
 
 /**
- * GET SINGLE Payment Team BY ID
+ * GET SINGLE Payment Terms BY ID
  */
 export const getPaymentTeamById = async (req, res) => {
   try {
@@ -62,7 +62,7 @@ export const getPaymentTeamById = async (req, res) => {
     if (!paymentTeam) {
       return res.status(404).json({
         success: false,
-        message: "Payment Team not found",
+        message: "Payment Terms not found",
       });
     }
 
@@ -76,7 +76,7 @@ export const getPaymentTeamById = async (req, res) => {
 };
 
 /**
- * UPDATE Payment Team
+ * UPDATE Payment Terms
  */
 export const updatePaymentTeam = async (req, res) => {
   const { teamCode, teamName, contactPerson, email, status } = req.body;
@@ -94,7 +94,7 @@ export const updatePaymentTeam = async (req, res) => {
     if (!paymentTeam) {
       return res.status(404).json({
         success: false,
-        message: "Payment Team not found",
+        message: "Payment Terms not found",
       });
     }
 
@@ -108,7 +108,7 @@ export const updatePaymentTeam = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Payment Team updated successfully",
+      message: "Payment Terms updated successfully",
       data: paymentTeam,
     });
   } catch (error) {
@@ -117,7 +117,7 @@ export const updatePaymentTeam = async (req, res) => {
 };
 
 /**
- * DELETE Payment Team
+ * DELETE Payment Terms
  */
 export const deletePaymentTeam = async (req, res) => {
   try {
@@ -128,13 +128,13 @@ export const deletePaymentTeam = async (req, res) => {
     if (!deleted) {
       return res.status(404).json({
         success: false,
-        message: "Payment Team not found",
+        message: "Payment Terms not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Payment Team deleted successfully",
+      message: "Payment Terms deleted successfully",
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

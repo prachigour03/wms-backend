@@ -15,6 +15,10 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      itemName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       date: DataTypes.STRING,
       location: DataTypes.STRING,
       finalRate: DataTypes.STRING,

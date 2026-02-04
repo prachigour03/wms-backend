@@ -1,9 +1,10 @@
+import bcrypt from "bcryptjs";
 import db from "../../../../models/index.js";
-import bcrypt from "bcrypt";
 
 const { Employee } = db;
-
-/* ---------------- CREATE EMPLOYEE ---------------- */
+/**
+ * ✅ Create Employee
+ */
 export const createEmployee = async (req, res) => {
   try {
     const {
@@ -13,18 +14,18 @@ export const createEmployee = async (req, res) => {
       phone,
       password,
       designation,
-      locationId,
-      subsidiaryId,
       status,
     } = req.body;
 
-    // check email already exists
-    const existing = await Employee.findOne({ where: { email } });
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already exists",
-      });
+    // check required fields
+    if (!firstName || !lastName || !email || !phone || !password || !designation) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // check existing email
+    const existingEmployee = await Employee.findOne({ where: { email } });
+    if (existingEmployee) {
+      return res.status(409).json({ message: "Email already exists" });
     }
 
     // hash password
@@ -37,133 +38,100 @@ export const createEmployee = async (req, res) => {
       phone,
       password: hashedPassword,
       designation,
-      locationId,
-      subsidiaryId,
       status: status || "Active",
     });
 
     res.status(201).json({
-      success: true,
       message: "Employee created successfully",
       data: employee,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to create employee",
-      error: error.message,
-    });
+    console.error("Create Employee Error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-/* ---------------- GET ALL EMPLOYEES ---------------- */
-export const getEmployees = async (req, res) => {
+/**
+ * ✅ Get All Employees
+ */
+export const getAllEmployees = async (req, res) => {
   try {
     const employees = await Employee.findAll({
       attributes: { exclude: ["password"] },
-      include: [
-        { model: Location, attributes: ["id", "name"] },
-        { model: Subsidiary, attributes: ["id", "name"] },
-      ],
-      order: [["createdAt", "DESC"]],
     });
 
-    res.status(200).json({
-      success: true,
-      data: employees,
-    });
+    res.status(200).json({ data: employees });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch employees",
-      error: error.message,
-    });
+    res.status(500).json({ error, message: "Internal server error" });
   }
 };
 
-/* ---------------- GET EMPLOYEE BY ID ---------------- */
+/**
+ * ✅ Get Employee By ID
+ */
 export const getEmployeeById = async (req, res) => {
   try {
-    const employee = await Employee.findByPk(req.params.id, {
+    const { id } = req.params;
+
+    const employee = await Employee.findByPk(id, {
       attributes: { exclude: ["password"] },
-      include: [Location, Subsidiary],
     });
 
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return res.status(404).json({ message: "Employee not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      data: employee,
-    });
+    res.status(200).json({ data: employee });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch employee",
-      error: error.message,
-    });
+    res.status(500).json({ error, message: "Internal server error" });
   }
 };
 
-/* ---------------- UPDATE EMPLOYEE ---------------- */
+/**
+ * ✅ Update Employee
+ */
 export const updateEmployee = async (req, res) => {
   try {
-    const employee = await Employee.findByPk(req.params.id);
+    const { id } = req.params;
 
+    const employee = await Employee.findByPk(id);
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return res.status(404).json({ message: "Employee not found" });
     }
 
-    if (req.body.password) {
-      req.body.password = await bcrypt.hash(req.body.password, 10);
+    const updatedData = { ...req.body };
+
+    // if password is being updated
+    if (updatedData.password) {
+      updatedData.password = await bcrypt.hash(updatedData.password, 10);
     }
 
-    await employee.update(req.body);
+    await employee.update(updatedData);
 
     res.status(200).json({
-      success: true,
       message: "Employee updated successfully",
-      data: employee,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to update employee",
-      error: error.message,
-    });
+    res.status(500).json({ error, message: "Internal server error" });
   }
 };
 
-/* ---------------- DELETE EMPLOYEE ---------------- */
+/**
+ * ✅ Delete Employee
+ */
 export const deleteEmployee = async (req, res) => {
   try {
-    const employee = await Employee.findByPk(req.params.id);
+    const { id } = req.params;
 
+    const employee = await Employee.findByPk(id);
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return res.status(404).json({ message: "Employee not found" });
     }
 
     await employee.destroy();
 
-    res.status(200).json({
-      success: true,
-      message: "Employee deleted successfully",
-    });
+    res.status(200).json({ message: "Employee deleted successfully" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete employee",
-      error: error.message,
-    });
+    res.status(500).json({error, message: "Internal server error" });
   }
 };

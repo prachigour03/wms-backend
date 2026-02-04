@@ -1,12 +1,15 @@
 import db from "../../../models/index.js";
-import { Op, fn, col, literal } from "sequelize";
+import { Op, fn, col, literal, cast } from "sequelize";
 
 const {
   User,
-  Order,
-  OrderItem,
-  Activity,
-  Task,
+  OrderBooking,
+  Customer,
+  Item,
+  InwardChallan,
+  VendorIssueMaterial,
+  MaterialConsumption,
+  ReturnMaterial,
 } = db;
 
 const getDateRange = (range) => {
@@ -21,94 +24,107 @@ export const dashboardService = async (range) => {
 
   /* ================= TOP STATS ================= */
   const [
-    totalRevenue,
+    totalRevenueRow,
     activeUsers,
-    totalProjects,
+    customersCount,
+    ordersCount,
+    inventoryCount,
   ] = await Promise.all([
-    Order?.sum("totalAmount", {
+    OrderBooking.findAll({
+      attributes: [
+        [fn("SUM", cast(col("finalRate"), "numeric")), "totalRevenue"],
+      ],
       where: { createdAt: { [Op.gte]: startDate } },
+      raw: true,
     }),
     User.count(),
-    db.Project?.count() || 0,
+    Customer.count({ where: { createdAt: { [Op.gte]: startDate } } }),
+    OrderBooking.count({ where: { createdAt: { [Op.gte]: startDate } } }),
+    Item.count({ where: { createdAt: { [Op.gte]: startDate } } }),
   ]);
+  const totalRevenue = Number(totalRevenueRow?.[0]?.totalRevenue || 0);
 
   /* ================= REVENUE LINE CHART ================= */
-  const revenueChart = Order
-    ? await Order.findAll({
-        attributes: [
-          [
-            fn(
-              "TO_CHAR",
-              fn("DATE_TRUNC", "month", col("createdAt")),
-              "Mon"
-            ),
-            "period",
-          ],
-          [fn("SUM", col("totalAmount")), "revenue"],
-        ],
-        where: {
-          createdAt: { [Op.gte]: startDate },
-        },
-        group: ["period"],
-        order: [[literal("MIN(createdAt)"), "ASC"]],
-        raw: true,
-      })
-    : [];
+  const revenueChart = await OrderBooking.findAll({
+    attributes: [
+      [
+        fn(
+          "TO_CHAR",
+          fn("DATE_TRUNC", "month", col("createdAt")),
+          "Mon"
+        ),
+        "period",
+      ],
+      [fn("SUM", cast(col("finalRate"), "numeric")), "revenue"],
+    ],
+    where: {
+      createdAt: { [Op.gte]: startDate },
+    },
+    group: ["period"],
+    order: [[literal('MIN("OrderBooking"."createdAt")'), "ASC"]],
+    raw: true,
+  });
+
+  /* ================= ACTIVE USERS (NEW USERS OVER TIME) ================= */
+  const activeUsersChart = await User.findAll({
+    attributes: [
+      [
+        fn(
+          "TO_CHAR",
+          fn("DATE_TRUNC", "day", col("createdAt")),
+          "YYYY-MM-DD"
+        ),
+        "period",
+      ],
+      [fn("COUNT", col("id")), "count"],
+    ],
+    where: {
+      createdAt: { [Op.gte]: startDate },
+    },
+    group: ["period"],
+    order: [[literal('MIN("User"."createdAt")'), "ASC"]],
+    raw: true,
+  });
 
   /* ================= SALES BY CATEGORY ================= */
-  const salesByCategory = OrderItem
-    ? await OrderItem.findAll({
-        attributes: [
-          "category",
-          [fn("SUM", col("price")), "sales"],
-        ],
-        group: ["category"],
-        raw: true,
-      })
-    : [];
+  const [
+    inwardChallanCount,
+    consumptionCount,
+    issueMaterialCount,
+    returnMaterialCount,
+  ] = await Promise.all([
+    InwardChallan.count({ where: { createdAt: { [Op.gte]: startDate } } }),
+    MaterialConsumption.count({ where: { createdAt: { [Op.gte]: startDate } } }),
+    VendorIssueMaterial.count({
+      where: { createdAt: { [Op.gte]: startDate } },
+    }),
+    ReturnMaterial.count({ where: { createdAt: { [Op.gte]: startDate } } }),
+  ]);
 
-  /* ================= TASK PROGRESS ================= */
-  const taskProgress = Task
-    ? await Task.findAll({
-        attributes: ["name", "progress"],
-        limit: 5,
-        order: [["updatedAt", "DESC"]],
-        raw: true,
-      })
-    : [];
-
-  /* ================= RECENT ACTIVITIES ================= */
-  const activities = Activity
-    ? await Activity.findAll({
-        attributes: ["title", "type", "createdAt"],
-        limit: 5,
-        order: [["createdAt", "DESC"]],
-        raw: true,
-      })
-    : [];
+  /* ================= RECENT ORDERS ================= */
+  const recentOrders = await OrderBooking.findAll({
+    attributes: ["id", "tranditionId", "finalRate", "createdAt"],
+    where: { createdAt: { [Op.gte]: startDate } },
+    limit: 6,
+    order: [["createdAt", "DESC"]],
+    raw: true,
+  });
 
   return {
     stats: {
-      totalRevenue: totalRevenue || 0,
+      totalRevenue,
+      customers: customersCount,
+      orders: ordersCount,
+      inventory: inventoryCount,
       activeUsers,
-      projects: totalProjects,
-      growth: 24.5,
+      projects: 0,
     },
-    revenueChart,          // ✅ FIXED
-    salesByCategory,
-    taskProgress: taskProgress.map(t => ({
-      label: t.name,
-      value: t.progress,
-    })),
-    activities: activities.map(a => ({
-      title: a.title,
-      type: a.type,
-      time: a.createdAt,
-    })),
-
-    progress: taskProgress.map(t => ({
-      label: t.name,
-      value: t.progress,
-    })),
+    revenueChart,
+    activeUsersChart,
+    inwardChallanCount,
+    consumptionCount,
+    issueMaterialCount,
+    returnMaterialCount,
+    recentOrders,
   };
 };

@@ -1,131 +1,212 @@
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import { Op } from "sequelize";
 import db from "../../models/index.js";
 import { generateToken } from "../../utils/jwt.js";
 import { sendEmail } from "../../utils/sendEmail.js";
 
-const User = db.User;
+const { User, Role, Permission } = db;
 
-/* REGISTER */
+/* ======================================================
+   HELPER: BUILD PERMISSIONS
+====================================================== */
+const buildPermissions = async (user) => {
+  const roleName = user.Role?.name?.toLowerCase();
+
+  // SUPER ADMIN => all permissions
+  if (roleName === "super admin") {
+    const allPermissions = await Permission.findAll();
+    return allPermissions.map((p) => `${p.module}:${p.action}`);
+  }
+
+  // User-specific overrides (if any)
+  if (Array.isArray(user.UserPermissions) && user.UserPermissions.length > 0) {
+    return user.UserPermissions.map((p) => `${p.module}:${p.action}`);
+  }
+
+  return Array.isArray(user.Role?.Permissions)
+    ? user.Role.Permissions.map((p) => `${p.module}:${p.action}`)
+    : [];
+};
+
+/* ======================================================
+   REGISTER (NORMAL USER)
+====================================================== */
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const exists = await User.findOne({ where: { email } });
-    if (exists) return res.status(400).json({ message: "Email already exists" });
+    const exists = await User.findOne({ where: { email: email.toLowerCase() } });
+    if (exists)
+      return res.status(409).json({ success: false, message: "Email already exists" });
 
-    const user = await User.create({ name, email, password, role: "user" });
+    const userRole = await Role.findOne({ where: { name: "user" } }); 
+    if (!userRole)
+      return res.status(500).json({ success: false, message: "USER role missing" });
 
-    const token = generateToken(user);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      roleId: userRole.id,
+    });
 
     res.status(201).json({
-      token,
-      user: { id: user.id, name: user.name, email: user.email },
+      success: true,
+      message: "User registered successfully",
+      userId: user.id,
     });
-  } catch (err) {
-    console.error("REGISTER ERROR:", err);
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
+    res.status(500).json({ success: false, message: "Registration failed" });
   }
 };
 
-/* LOGIN */
+/* ======================================================
+   LOGIN
+====================================================== */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log("LOGIN REQUEST:", email);
+    const user = await User.findOne({
+      where: { email: email.toLowerCase() },
+      include: [
+        {
+          model: Role,
+          include: [{ model: Permission, through: { attributes: [] } }],
+        },
+        {
+          model: Permission,
+          as: "UserPermissions",
+          through: { attributes: [] },
+        },
+      ],
+    });
 
-    const user = await User.findOne({ where: { email } });
-
-    if (!user) {
-      console.log("❌ User not found");
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (!user.password) {
-      console.log("❌ Password missing in DB");
-      return res.status(500).json({ message: "Password not set for user" });
-    }
+    if (!user)
+      return res.status(404).json({ success: false, message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
 
-    if (!isMatch) {
-      console.log("❌ Password mismatch");
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    const permissions = await buildPermissions(user);
 
-    const token = generateToken(user);
+    const token = await generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.Role?.name,
+      permissions,
+    });
 
     res.json({
+      success: true,
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.Role?.name,
+        permissions,
       },
     });
-  } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    res.status(500).json({ message: "Login failed" });
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+    res.status(500).json({ success: false, message: "Login failed" });
   }
 };
 
-/* FORGOT PASSWORD (OTP EMAIL) */
+/* ======================================================
+   FORGOT PASSWORD (OTP)
+====================================================== */
 export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ where: { email: email.toLowerCase() } });
 
-  // 1. Check user exists
-  const user = await User.findOne({ where: { email } });
-  if (!user) return res.status(404).json({ message: "Email not found" });
+    if (!user)
+      return res.status(404).json({ success: false, message: "Email not found" });
 
-  // 2. Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  // 3. Save OTP in DB OR memory
-  user.otp = otp; 
-  user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
-  await user.save();
+    user.otp = otp;
+    user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+    if (user.otpVerified === undefined) user.otpVerified = false; // safe default
+    await user.save();
 
-  // 4. Send OTP via email
-  const sent = await sendEmail(user.email, "Reset OTP", `Your OTP: ${otp}`);
-  if (!sent) return res.status(500).json({ message: "Failed to send OTP" });
+    await sendEmail(user.email, "Password Reset OTP", `Your OTP is ${otp}. Valid for 5 minutes.`);
 
-  res.json({ message: "OTP sent successfully" });
+    res.json({ success: true, message: "OTP sent successfully" });
+  } catch (error) {
+    console.error("FORGOT PASSWORD ERROR:", error);
+    res.status(500).json({ success: false, message: "Failed to send OTP" });
+  }
 };
 
-/* VERIFY OTP */
+/* ======================================================
+   VERIFY OTP
+====================================================== */
 export const verifyOtp = async (req, res) => {
-  const { email, otp } = req.body;
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ where: { email: email.toLowerCase() } });
 
-  const user = await User.findOne({ where: { email } });
+    if (!user || user.otp !== otp)
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
 
-  if (!user || user.otp !== otp)
-    return res.status(400).json({ message: "Invalid OTP" });
+    if (Date.now() > new Date(user.otpExpiry).getTime())
+      return res.status(400).json({ success: false, message: "OTP expired" });
 
-  if (Date.now() > user.otpExpiry)
-    return res.status(400).json({ message: "OTP expired" });
+    user.otpVerified = true;
+    await user.save();
 
-  res.json({ message: "OTP verified" });
+    res.json({ success: true, message: "OTP verified" });
+  } catch (error) {
+    console.error("VERIFY OTP ERROR:", error);
+    res.status(500).json({ success: false, message: "OTP verification failed" });
+  }
 };
 
-/* RESET PASSWORD + AUTO LOGIN */
+   //RESET PASSWORD
 export const resetPassword = async (req, res) => {
-  const { email, newPassword } = req.body;
+  try {
+    const { email, newPassword } = req.body;
 
-  const user = await User.findOne({ where: { email } });
-  if (!user) return res.status(404).json({ message: "User not found" });
+    const user = await User.findOne({
+      where: { email: email.toLowerCase() },
+      include: [
+        { model: Role, include: [Permission] },
+        { model: Permission, as: "UserPermissions", through: { attributes: [] } },
+      ],
+    });
 
-  user.password = await bcrypt.hash(newPassword, 10);
-  user.otp = null;
-  user.otpExpiry = null;
-  await user.save();
+    if (!user || !user.otpVerified)
+      return res.status(403).json({ success: false, message: "OTP verification required" });
 
-  const token = generateToken(user);
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = null;
+    user.otpExpiry = null;
+    user.otpVerified = false;
+    await user.save();
 
-  res.json({
-    message: "Password reset successful",
-    token,
-    user: { id: user.id, name: user.name, email: user.email },
-  });
+    const permissions = await buildPermissions(user);
+
+    const token = await generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.Role?.name,
+      permissions,
+    });
+
+    res.json({
+      success: true,
+      message: "Password reset successful",
+      token,
+    });
+  } catch (error) {
+    console.error("RESET PASSWORD ERROR:", error);
+    res.status(500).json({ success: false, message: "Password reset failed" });
+  }
 };
+

@@ -3,10 +3,14 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import path from "path";
-import db from "./models/index.js";
+
 import rateLimit from "express-rate-limit";
+
 // Auth
 import authRoutes from "./modules/auth/auth.routes.js";
+import userRoutes from "./modules/users/user.routes.js";
+import roleRoutes from "./modules/roles/role.routes.js";
+import permissionRoutes from "./modules/roles/rolePermission.routes.js";
 import dashboardRoutes from "./modules/dashboard/index.js";
 
 // Forms
@@ -15,6 +19,7 @@ import transitionRoutes from "./modules/forms/Transition/routes/index.js";
 import setupRoutes from "./modules/forms/Setup/routes/index.js";
 import masterRoutes from "./modules/forms/Master/routes/index.js";
 import profileRoutes from "./modules/forms/Profile/routes/profile.routes.js";
+import notificationRoutes from "./modules/notification/routes/notification.routes.js";
 
 const app = express();
 
@@ -30,24 +35,39 @@ app.use(
   })
 );
 
+const whitelist = new Set([
+  process.env.FRONTEND_URL || "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+]);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow requests with no origin (e.g., curl, postman)
+    if (!origin) return callback(null, true);
+
+    // allow all in non-production to avoid preflight failures
+    if (process.env.NODE_ENV !== "production") return callback(null, true);
+
+    if (whitelist.has(origin)) return callback(null, true);
+    return callback(null, false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+
+// CORS should run before rate limiter so even error responses include headers
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
 });
 app.use(limiter);
-
-const whitelist = [process.env.FRONTEND_URL || "http://localhost:5173", "http://localhost:5174"];
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (e.g., curl, postman) and allow whitelisted dev hosts
-      if (!origin) return callback(null, true);
-      if (whitelist.indexOf(origin) !== -1) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
 app.use(compression());
 
 /* ================== STATIC FILES ================== */
@@ -55,8 +75,12 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 /* ================== ROUTES ================== */
 
+app.use("/api/notifications", notificationRoutes);
 // Auth
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/roles", roleRoutes);
+app.use("/api/permissions", permissionRoutes);
 
 app.use("/api/dashboard", dashboardRoutes);
 
@@ -76,7 +100,7 @@ app.use("/api/forms/setup", setupRoutes);
 app.use("/api/forms/master", masterRoutes);
 
 /* ================== GLOBAL ERROR HANDLER ================== */
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   console.error("Error:", err.message);
 
   res.status(err.status || 500).json({

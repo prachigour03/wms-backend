@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
+  up: async (queryInterface) => {
     await queryInterface.bulkInsert('company_details', [{
       companyName: 'ABC Technologies Pvt Ltd',
       companyCode: 'ABC001',
@@ -19,7 +19,7 @@ module.exports = {
     }], {});
   },
 
-  down: async (queryInterface, Sequelize) => {
+  down: async (queryInterface) => {
     await queryInterface.bulkDelete('company_details', null, {});
   }
 };
