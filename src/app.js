@@ -35,22 +35,40 @@ app.use(
   })
 );
 
-const whitelist = new Set([
-  process.env.FRONTEND_URL || "http://localhost:5173",
-  "http://localhost:5174",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:5174",
-]);
+const normalizeOrigin = (origin) => (origin ? origin.replace(/\/$/, "") : origin);
+
+const staticOrigins = [
+  process.env.FRONTEND_URL,
+];
+
+const envOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set(
+  [...staticOrigins, ...envOrigins].map((origin) => normalizeOrigin(origin))
+);
+
+const isLocalhostOrigin = (origin) =>
+  /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+
+  if (process.env.CORS_ALLOW_ALL === "true") return true;
+
+  if (process.env.NODE_ENV !== "production") return true;
+
+  const normalized = normalizeOrigin(origin);
+  if (isLocalhostOrigin(normalized)) return true;
+
+  return allowedOrigins.has(normalized);
+};
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow requests with no origin (e.g., curl, postman)
-    if (!origin) return callback(null, true);
-
-    // allow all in non-production to avoid preflight failures
-    if (process.env.NODE_ENV !== "production") return callback(null, true);
-
-    if (whitelist.has(origin)) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
     return callback(null, false);
   },
   credentials: true,
