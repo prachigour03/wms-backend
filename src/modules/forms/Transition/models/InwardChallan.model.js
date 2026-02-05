@@ -39,8 +39,63 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
 
+      workOrder: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      workCategory: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      store: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      customer: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      city: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      site: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      vehicleNo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      transporter: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      deliveryDate: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
+
+      grandTotal: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+      },
+
+      materialStatus: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
       status: {
-        type: DataTypes.ENUM("Pending", "Received"),
+        type: DataTypes.ENUM("Pending", "Received", "Cancelled"),
         defaultValue: "Pending",
       },
     },

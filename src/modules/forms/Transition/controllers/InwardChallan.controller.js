@@ -14,6 +14,17 @@ export const createInwardChallan = async (req, res) => {
     quantity,
     warehouse,
     status,
+    workOrder,
+    workCategory,
+    store,
+    customer,
+    city,
+    site,
+    vehicleNo,
+    transporter,
+    deliveryDate,
+    grandTotal,
+    materialStatus,
   } = req.body || {};
 
   // Validation
@@ -32,6 +43,17 @@ export const createInwardChallan = async (req, res) => {
       itemName,
       quantity,
       warehouse,
+      workOrder,
+      workCategory,
+      store,
+      customer,
+      city,
+      site,
+      vehicleNo,
+      transporter,
+      deliveryDate,
+      grandTotal,
+      materialStatus,
       status, // optional
     });
 

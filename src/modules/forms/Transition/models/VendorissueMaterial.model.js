@@ -39,6 +39,21 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
 
+      workOrder: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      customer: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      issuedBy: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
       status: {
         type: DataTypes.ENUM("Pending", "Issued", "Completed"),
         defaultValue: "Pending",

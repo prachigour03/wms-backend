@@ -6,7 +6,18 @@ const { VendorIssueMaterial } = db;
  * CREATE Vendor Issue Material
  */
 export const createVendorIssueMaterial = async (req, res) => {
-  const { issueNo, issueDate, vendorName, materialName, quantity, unit, status } = req.body || {};
+  const {
+    issueNo,
+    issueDate,
+    vendorName,
+    materialName,
+    quantity,
+    unit,
+    status,
+    workOrder,
+    customer,
+    issuedBy,
+  } = req.body || {};
 
   if (!issueNo || !issueDate || !vendorName || !materialName || quantity == null || !unit) {
     return res.status(400).json({ success: false, message: "All required fields must be provided" });
@@ -20,6 +31,9 @@ export const createVendorIssueMaterial = async (req, res) => {
       materialName,
       quantity,
       unit,
+      workOrder,
+      customer,
+      issuedBy,
       status,
     });
     res.status(201).json({ success: true, data: record });

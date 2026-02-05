@@ -19,6 +19,36 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
 
+      type: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      vendorEmployee: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      workOrder: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      site: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+
+      totalAmount: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true,
+      },
+
+      status: {
+        type: DataTypes.ENUM("Draft", "Confirmed", "Cancelled"),
+        defaultValue: "Draft",
+      },
+
       itemName: {
         type: DataTypes.STRING,
         allowNull: false,
