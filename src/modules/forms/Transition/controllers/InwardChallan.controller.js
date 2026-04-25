@@ -1,75 +1,43 @@
 import db from "../../../../models/index.js";
 
-const { InwardChallan } = db;
+const { InwardChallan, InwardChallanItem, sequelize } = db;
 
 /**
  * CREATE Inward Challan
  */
 export const createInwardChallan = async (req, res) => {
-  const {
-    challanNo,
-    vendor,
-    challanDate,
-    itemName,
-    quantity,
-    warehouse,
-    status,
-    workOrder,
-    workCategory,
-    store,
-    customer,
-    city,
-    site,
-    vehicleNo,
-    transporter,
-    deliveryDate,
-    grandTotal,
-    materialStatus,
-  } = req.body || {};
-
-  // Validation
-  if (!challanNo || !vendor || !challanDate || !itemName || quantity == null || !warehouse) {
-    return res.status(400).json({
-      success: false,
-      message: "All required fields must be provided",
-    });
-  }
-
+  const t = await sequelize.transaction();
   try {
-    const challan = await InwardChallan.create({
-      challanNo,
-      vendor,
-      challanDate,
-      itemName,
-      quantity,
-      warehouse,
-      workOrder,
-      workCategory,
-      store,
-      customer,
-      city,
-      site,
-      vehicleNo,
-      transporter,
-      deliveryDate,
-      grandTotal,
-      materialStatus,
-      status, // optional
+    const { items, ...headerData } = req.body;
+
+    const challan = await InwardChallan.create(headerData, { transaction: t });
+
+    if (items && items.length > 0) {
+      const itemsWithId = items.map((item) => ({
+        ...item,
+        inwardChallanId: challan.id,
+      }));
+      await InwardChallanItem.bulkCreate(itemsWithId, { transaction: t });
+    }
+
+    await t.commit();
+    
+    const result = await InwardChallan.findByPk(challan.id, {
+      include: [{ model: InwardChallanItem, as: "items" }],
     });
 
     res.status(201).json({
       success: true,
-      data: challan,
+      data: result,
     });
   } catch (error) {
-    // Unique challanNo error
+    await t.rollback();
     if (error.name === "SequelizeUniqueConstraintError") {
       return res.status(409).json({
         success: false,
         message: "Challan number already exists",
       });
     }
-
     res.status(500).json({
       success: false,
       message: error.message,
@@ -99,21 +67,21 @@ export const getInwardChallans = async (req, res) => {
 };
 
 /**
- * UPDATE Inward Challan
+ * GET Inward Challan By ID
  */
-export const updateInwardChallan = async (req, res) => {
+export const getInwardChallanById = async (req, res) => {
   try {
     const { id } = req.params;
+    const challan = await InwardChallan.findByPk(id, {
+      include: [{ model: InwardChallanItem, as: "items" }],
+    });
 
-    const challan = await InwardChallan.findByPk(id);
     if (!challan) {
       return res.status(404).json({
         success: false,
         message: "Inward Challan not found",
       });
     }
-
-    await challan.update(req.body);
 
     res.status(200).json({
       success: true,
@@ -128,26 +96,169 @@ export const updateInwardChallan = async (req, res) => {
 };
 
 /**
- * DELETE Inward Challan
+ * UPDATE Inward Challan
  */
-export const deleteInwardChallan = async (req, res) => {
+export const updateInwardChallan = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
+    const { items, ...headerData } = req.body;
 
-    const deleted = await InwardChallan.destroy({
-      where: { id },
-    });
-
-    if (!deleted) {
+    const challan = await InwardChallan.findByPk(id);
+    if (!challan) {
+      await t.rollback();
       return res.status(404).json({
         success: false,
         message: "Inward Challan not found",
       });
     }
 
+    if (challan.status !== "Draft") {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Only Draft entries can be updated",
+      });
+    }
+
+    await challan.update(headerData, { transaction: t });
+
+    if (items) {
+      // Simple approach: delete all and recreate
+      await InwardChallanItem.destroy({
+        where: { inwardChallanId: id },
+        transaction: t,
+      });
+
+      if (items.length > 0) {
+        const itemsWithId = items.map((item) => ({
+          ...item,
+          inwardChallanId: id,
+        }));
+        await InwardChallanItem.bulkCreate(itemsWithId, { transaction: t });
+      }
+    }
+
+    await t.commit();
+
+    const result = await InwardChallan.findByPk(id, {
+      include: [{ model: InwardChallanItem, as: "items" }],
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * DELETE Inward Challan
+ */
+export const deleteInwardChallan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const challan = await InwardChallan.findByPk(id);
+
+    if (!challan) {
+      return res.status(404).json({
+        success: false,
+        message: "Inward Challan not found",
+      });
+    }
+
+    if (challan.status !== "Draft") {
+      return res.status(400).json({
+        success: false,
+        message: "Only Draft entries can be deleted",
+      });
+    }
+
+    await challan.destroy();
+
     res.status(200).json({
       success: true,
       message: "Inward Challan deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * CONFIRM Inward Challan
+ */
+export const confirmInwardChallan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const challan = await InwardChallan.findByPk(id);
+
+    if (!challan) {
+      return res.status(404).json({
+        success: false,
+        message: "Inward Challan not found",
+      });
+    }
+
+    if (challan.status !== "Draft") {
+      return res.status(400).json({
+        success: false,
+        message: "Only Draft entries can be confirmed",
+      });
+    }
+
+    await challan.update({ status: "Confirmed" });
+
+    res.status(200).json({
+      success: true,
+      message: "Inward Challan confirmed successfully",
+      data: challan,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * CANCEL Inward Challan
+ */
+export const cancelInwardChallan = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const challan = await InwardChallan.findByPk(id);
+
+    if (!challan) {
+      return res.status(404).json({
+        success: false,
+        message: "Inward Challan not found",
+      });
+    }
+
+    if (challan.status === "Cancelled") {
+        return res.status(400).json({
+          success: false,
+          message: "Already cancelled",
+        });
+    }
+
+    await challan.update({ status: "Cancelled" });
+
+    res.status(200).json({
+      success: true,
+      message: "Inward Challan cancelled successfully",
+      data: challan,
     });
   } catch (error) {
     res.status(500).json({

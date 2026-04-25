@@ -7,6 +7,7 @@ import itemRoutes from "./item.routes.js";
 import itemGroupRoutes from "./itemGroup.routes.js";
 import employeeRoutes from "./employees.routes.js";
 import warehouseRoutes from "./warehouse.routes.js";
+import storeRoutes from "./store.routes.js";
 import vendorRoutes from "./vendor.routes.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.use("/items", itemRoutes);
 router.use("/item-groups", itemGroupRoutes);
 router.use("/employees", employeeRoutes);
 router.use("/warehouses", warehouseRoutes);
+router.use("/stores", storeRoutes);
 router.use("/vendors", vendorRoutes);
 
 export default router;

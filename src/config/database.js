@@ -4,6 +4,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const databaseUrl = process.env.DATABASE_URL;
+const dbPassword = process.env.DB_PASSWORD ?? process.env.DB_PASS;
+
+if (!databaseUrl && typeof dbPassword !== "string") {
+  throw new Error(
+    "Missing database password. Set DB_PASSWORD (or legacy DB_PASS) in wms-backend/.env"
+  );
+}
 
 const baseConfig = {
   dialect: "postgres",
@@ -28,7 +35,7 @@ const sequelize = databaseUrl
   : new Sequelize(
       process.env.DB_NAME,
       process.env.DB_USER,
-      process.env.DB_PASSWORD,
+      dbPassword,
       {
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,

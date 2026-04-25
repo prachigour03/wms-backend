@@ -7,96 +7,98 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-
       challanNo: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
       },
-
-      vendor: {
-        type: DataTypes.STRING,
+      date: {
+        type: DataTypes.DATE,
         allowNull: false,
       },
-
-      challanDate: {
-        type: DataTypes.DATEONLY,
-        allowNull: false,
-      },
-
-      itemName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      quantity: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-
-      warehouse: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      workOrder: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-
-      workCategory: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-
-      store: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-
       customer: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
+      workOrderNo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      workOrderEndDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      shippedFrom: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      shippedTo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       city: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
       site: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
+      store: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      subsidiary: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      transportationMode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       vehicleNo: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
-      transporter: {
+      moNumber: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
+      lrNo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      tptId: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      tptName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       deliveryDate: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         allowNull: true,
       },
-
-      grandTotal: {
-        type: DataTypes.DECIMAL(12, 2),
+      remarks: {
+        type: DataTypes.TEXT,
         allowNull: true,
       },
-
-      materialStatus: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-
       status: {
-        type: DataTypes.ENUM("Pending", "Received", "Cancelled"),
-        defaultValue: "Pending",
+        type: DataTypes.ENUM("Draft", "Confirmed", "Cancelled"),
+        defaultValue: "Draft",
+      },
+      grandTotal: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      totalTax: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      totalAmount: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
       },
     },
     {
@@ -104,6 +106,14 @@ export default (sequelize, DataTypes) => {
       timestamps: true,
     }
   );
+
+  InwardChallan.associate = (models) => {
+    InwardChallan.hasMany(models.InwardChallanItem, {
+      foreignKey: "inwardChallanId",
+      as: "items",
+      onDelete: "CASCADE",
+    });
+  };
 
   return InwardChallan;
 };

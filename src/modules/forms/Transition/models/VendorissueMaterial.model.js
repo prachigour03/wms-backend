@@ -7,56 +7,78 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-
       issueNo: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
       },
-
-      issueDate: {
-        type: DataTypes.DATEONLY,
+      date: {
+        type: DataTypes.DATE,
         allowNull: false,
       },
-
-      vendorName: {
-        type: DataTypes.STRING,
-        allowNull: false,
+      type: {
+        type: DataTypes.ENUM("Vendor", "Employee"),
+        defaultValue: "Vendor",
       },
-
-      materialName: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      quantity: {
-        type: DataTypes.DECIMAL(12, 2),
-        allowNull: false,
-      },
-
-      unit: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      workOrder: {
+      issuedTo: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
+      vendor: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      team: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       customer: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
-      issuedBy: {
+      supervisorName: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
+      issueType: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      subsidiary: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      store: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      city: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      site: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      remarks: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
       status: {
-        type: DataTypes.ENUM("Pending", "Issued", "Completed"),
-        defaultValue: "Pending",
+        type: DataTypes.ENUM("Draft", "Confirmed", "Cancelled"),
+        defaultValue: "Draft",
+      },
+      grandTotal: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      totalTax: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      totalAmount: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
       },
     },
     {
@@ -64,6 +86,14 @@ export default (sequelize, DataTypes) => {
       timestamps: true,
     }
   );
+
+  VendorIssueMaterial.associate = (models) => {
+    VendorIssueMaterial.hasMany(models.VendorIssueMaterialItem, {
+      foreignKey: "vendorIssueMaterialId",
+      as: "items",
+      onDelete: "CASCADE",
+    });
+  };
 
   return VendorIssueMaterial;
 };

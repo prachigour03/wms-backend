@@ -13,10 +13,14 @@ import UserPermissionModel from "../modules/roles/userPermission.model.js";
 import OrderBookingModel from "../modules/forms/O2C/models/orderBooking.model.js";
 import InventoryCountModel from "../modules/forms/Transition/models/InventoryCount.model.js";
 import InwardChallanModel from "../modules/forms/Transition/models/InwardChallan.model.js";
+import InwardChallanItemModel from "../modules/forms/Transition/models/InwardChallanItem.model.js";
 import MaterialConsumptionModel from "../modules/forms/Transition/models/MaterialConsumption.model.js";
+import MaterialConsumptionItemModel from "../modules/forms/Transition/models/MaterialConsumptionItem.model.js";
 import ReturnMaterialModel from "../modules/forms/Transition/models/ReturnMaterial.model.js";
+import ReturnMaterialItemModel from "../modules/forms/Transition/models/ReturnMaterialItem.model.js";
 import VendorBillModel from "../modules/forms/Transition/models/VendorBill.model.js";
 import VendorIssueMaterialModel from "../modules/forms/Transition/models/VendorissueMaterial.model.js";
+import VendorIssueMaterialItemModel from "../modules/forms/Transition/models/VendorIssueMaterialItem.model.js";
 import ProfileModel from "../modules/forms/Profile/models/profile.model.js";
 
 // Setup
@@ -39,6 +43,7 @@ import ItemModel from "../modules/forms/Master/models/item.model.js";
 import ItemGroupModel from "../modules/forms/Master/models/itemGroup.model.js";
 import EmployeeModel from "../modules/forms/Master/models/employees.model.js";
 import WarehouseModel from "../modules/forms/Master/models/warehouse.model.js";
+import StoreModel from "../modules/forms/Master/models/store.model.js";
 import VendorModel from "../modules/forms/Master/models/vendor.model.js";
 import NotificationModel from "../modules/notification/model/notification.model.js";
 
@@ -60,10 +65,27 @@ db.OrderBooking = OrderBookingModel(sequelize, Sequelize.DataTypes);
 db.AdminProfile = ProfileModel(sequelize, Sequelize.DataTypes);
 db.InventoryCount = InventoryCountModel(sequelize, Sequelize.DataTypes);
 db.InwardChallan = InwardChallanModel(sequelize, Sequelize.DataTypes);
+db.InwardChallanItem = InwardChallanItemModel(sequelize, Sequelize.DataTypes);
 db.MaterialConsumption = MaterialConsumptionModel(sequelize, Sequelize.DataTypes);
+db.MaterialConsumptionItem = MaterialConsumptionItemModel(sequelize, Sequelize.DataTypes);
 db.ReturnMaterial = ReturnMaterialModel(sequelize, Sequelize.DataTypes);
+db.ReturnMaterialItem = ReturnMaterialItemModel(sequelize, Sequelize.DataTypes);
 db.VendorBill = VendorBillModel(sequelize, Sequelize.DataTypes);
 db.VendorIssueMaterial = VendorIssueMaterialModel(sequelize, Sequelize.DataTypes);
+db.VendorIssueMaterialItem = VendorIssueMaterialItemModel(sequelize, Sequelize.DataTypes);
+
+// Associations for Transition Modules
+db.InwardChallan.hasMany(db.InwardChallanItem, { foreignKey: 'inwardChallanId', as: 'items', onDelete: 'CASCADE' });
+db.InwardChallanItem.belongsTo(db.InwardChallan, { foreignKey: 'inwardChallanId', as: 'header' });
+
+db.VendorIssueMaterial.hasMany(db.VendorIssueMaterialItem, { foreignKey: 'vendorIssueMaterialId', as: 'items', onDelete: 'CASCADE' });
+db.VendorIssueMaterialItem.belongsTo(db.VendorIssueMaterial, { foreignKey: 'vendorIssueMaterialId', as: 'header' });
+
+db.MaterialConsumption.hasMany(db.MaterialConsumptionItem, { foreignKey: 'materialConsumptionId', as: 'items', onDelete: 'CASCADE' });
+db.MaterialConsumptionItem.belongsTo(db.MaterialConsumption, { foreignKey: 'materialConsumptionId', as: 'header' });
+
+db.ReturnMaterial.hasMany(db.ReturnMaterialItem, { foreignKey: 'returnMaterialId', as: 'items', onDelete: 'CASCADE' });
+db.ReturnMaterialItem.belongsTo(db.ReturnMaterial, { foreignKey: 'returnMaterialId', as: 'header' });
 
 // Setup
 db.State = StateModel(sequelize, Sequelize.DataTypes);
@@ -85,6 +107,7 @@ db.Item = ItemModel(sequelize, Sequelize.DataTypes);
 db.ItemGroup = ItemGroupModel(sequelize, Sequelize.DataTypes);
 db.Employee = EmployeeModel(sequelize, Sequelize.DataTypes);
 db.Warehouse = WarehouseModel(sequelize, Sequelize.DataTypes);
+db.Store = StoreModel(sequelize, Sequelize.DataTypes);
 db.Vendor = VendorModel(sequelize, Sequelize.DataTypes);
 
 

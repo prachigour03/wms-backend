@@ -7,71 +7,58 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-
       consumptionNo: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
       },
-
       date: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         allowNull: false,
       },
-
-      type: {
+      department: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
-      vendorEmployee: {
+      consumedBy: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
-      workOrder: {
+      subsidiary: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
+      store: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      city: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       site: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-
-      totalAmount: {
-        type: DataTypes.DECIMAL(12, 2),
+      remarks: {
+        type: DataTypes.TEXT,
         allowNull: true,
       },
-
       status: {
         type: DataTypes.ENUM("Draft", "Confirmed", "Cancelled"),
         defaultValue: "Draft",
       },
-
-      itemName: {
-        type: DataTypes.STRING,
-        allowNull: false,
+      grandTotal: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
       },
-
-      quantity: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
+      totalTax: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
       },
-
-      department: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      warehouse: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-
-      remarks: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      totalAmount: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
       },
     },
     {
@@ -79,6 +66,14 @@ export default (sequelize, DataTypes) => {
       timestamps: true,
     }
   );
+
+  MaterialConsumption.associate = (models) => {
+    MaterialConsumption.hasMany(models.MaterialConsumptionItem, {
+      foreignKey: "materialConsumptionId",
+      as: "items",
+      onDelete: "CASCADE",
+    });
+  };
 
   return MaterialConsumption;
 };

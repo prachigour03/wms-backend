@@ -1,177 +1,104 @@
 import db from "../../../../models/index.js";
 
-const { MaterialConsumption } = db;
+const { MaterialConsumption, MaterialConsumptionItem, sequelize } = db;
 
-/**
- * CREATE Material Consumption
- */
 export const createMaterialConsumption = async (req, res) => {
-  const {
-    consumptionNo,
-    date,
-    type,
-    vendorEmployee,
-    workOrder,
-    site,
-    totalAmount,
-    status,
-    itemName,
-    quantity,
-    department,
-    warehouse,
-    remarks,
-  } = req.body || {};
-
-  // Validation
-  if (
-    !consumptionNo ||
-    !date ||
-    !itemName ||
-    quantity == null ||
-    !department ||
-    !warehouse
-  ) {
-    return res.status(400).json({
-      success: false,
-      message: "All required fields must be provided",
-    });
-  }
-
+  const t = await sequelize.transaction();
   try {
-    const consumption = await MaterialConsumption.create({
-      consumptionNo,
-      date,
-      type,
-      vendorEmployee,
-      workOrder,
-      site,
-      totalAmount,
-      status,
-      itemName,
-      quantity,
-      department,
-      warehouse,
-      remarks,
-    });
-
-    res.status(201).json({
-      success: true,
-      data: consumption,
-    });
-  } catch (error) {
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(409).json({
-        success: false,
-        message: "Consumption number already exists",
-      });
+    const { items, ...headerData } = req.body;
+    const header = await MaterialConsumption.create(headerData, { transaction: t });
+    if (items && items.length > 0) {
+      const itemsWithId = items.map(item => ({ ...item, materialConsumptionId: header.id }));
+      await MaterialConsumptionItem.bulkCreate(itemsWithId, { transaction: t });
     }
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    await t.commit();
+    const result = await MaterialConsumption.findByPk(header.id, { include: [{ model: MaterialConsumptionItem, as: "items" }] });
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * GET All Material Consumptions
- */
 export const getMaterialConsumptions = async (req, res) => {
   try {
-    const data = await MaterialConsumption.findAll({
-      order: [["createdAt", "DESC"]],
-    });
-
-    res.status(200).json({
-      success: true,
-      data,
-    });
+    const results = await MaterialConsumption.findAll({ order: [["createdAt", "DESC"]] });
+    res.status(200).json({ success: true, data: results });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * GET Material Consumption By ID
- */
 export const getMaterialConsumptionById = async (req, res) => {
   try {
-    const record = await MaterialConsumption.findByPk(req.params.id);
-
-    if (!record) {
-      return res.status(404).json({
-        success: false,
-        message: "Material Consumption not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: record,
-    });
+    const { id } = req.params;
+    const result = await MaterialConsumption.findByPk(id, { include: [{ model: MaterialConsumptionItem, as: "items" }] });
+    if (!result) return res.status(404).json({ success: false, message: "Not found" });
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * UPDATE Material Consumption
- */
 export const updateMaterialConsumption = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const record = await MaterialConsumption.findByPk(req.params.id);
-
-    if (!record) {
-      return res.status(404).json({
-        success: false,
-        message: "Material Consumption not found",
-      });
+    const { id } = req.params;
+    const { items, ...headerData } = req.body;
+    const header = await MaterialConsumption.findByPk(id);
+    if (!header || header.status !== "Draft") {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: "Cannot update" });
     }
-
-    await record.update(req.body);
-
-    res.status(200).json({
-      success: true,
-      data: record,
-    });
+    await header.update(headerData, { transaction: t });
+    if (items) {
+      await MaterialConsumptionItem.destroy({ where: { materialConsumptionId: id }, transaction: t });
+      if (items.length > 0) {
+        const itemsWithId = items.map(item => ({ ...item, materialConsumptionId: id }));
+        await MaterialConsumptionItem.bulkCreate(itemsWithId, { transaction: t });
+      }
+    }
+    await t.commit();
+    const result = await MaterialConsumption.findByPk(id, { include: [{ model: MaterialConsumptionItem, as: "items" }] });
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    await t.rollback();
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * DELETE Material Consumption
- */
 export const deleteMaterialConsumption = async (req, res) => {
   try {
-    const deleted = await MaterialConsumption.destroy({
-      where: { id: req.params.id },
-    });
-
-    if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: "Material Consumption not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Material Consumption deleted successfully",
-    });
+    const { id } = req.params;
+    const header = await MaterialConsumption.findByPk(id);
+    if (!header || header.status !== "Draft") return res.status(400).json({ success: false, message: "Cannot delete" });
+    await header.destroy();
+    res.status(200).json({ success: true, message: "Deleted" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const confirmMaterialConsumption = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const header = await MaterialConsumption.findByPk(id);
+    if (!header || header.status !== "Draft") return res.status(400).json({ success: false, message: "Cannot confirm" });
+    await header.update({ status: "Confirmed" });
+    res.status(200).json({ success: true, message: "Confirmed" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const cancelMaterialConsumption = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const header = await MaterialConsumption.findByPk(id);
+    if (!header) return res.status(404).json({ success: false, message: "Not found" });
+    await header.update({ status: "Cancelled" });
+    res.status(200).json({ success: true, message: "Cancelled" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

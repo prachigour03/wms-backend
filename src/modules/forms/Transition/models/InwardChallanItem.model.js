@@ -1,0 +1,94 @@
+export default (sequelize, DataTypes) => {
+  const InwardChallanItem = sequelize.define(
+    "InwardChallanItem",
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      inwardChallanId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
+      workOrderNo: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      itemCode: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      itemName: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      itemDescription: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      hsnSac: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      lotNumber: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      quantity: {
+        type: DataTypes.DECIMAL(15, 2),
+        allowNull: false,
+        defaultValue: 0,
+      },
+      uom: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      workCategory: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      materialStatus: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      useRate: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      rate: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      taxRate: {
+        type: DataTypes.DECIMAL(10, 2),
+        defaultValue: 0,
+      },
+      taxAmount: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      lineTotal: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      store: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+    },
+    {
+      tableName: "inward_challan_items",
+      timestamps: true,
+    }
+  );
+
+  InwardChallanItem.associate = (models) => {
+    InwardChallanItem.belongsTo(models.InwardChallan, {
+      foreignKey: "inwardChallanId",
+      as: "header",
+    });
+  };
+
+  return InwardChallanItem;
+};

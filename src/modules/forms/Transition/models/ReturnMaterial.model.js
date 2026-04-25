@@ -7,41 +7,58 @@ export default (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-
       returnNo: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
       },
-
       date: {
-        type: DataTypes.DATEONLY,
+        type: DataTypes.DATE,
         allowNull: false,
       },
-
-      itemName: {
+      returnFrom: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
-
-      quantity: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-
-      returnedFrom: {
+      returnType: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
-
-      warehouse: {
+      subsidiary: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
       },
-
-      reason: {
+      store: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      city: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      site: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      remarks: {
         type: DataTypes.TEXT,
         allowNull: true,
+      },
+      status: {
+        type: DataTypes.ENUM("Draft", "Confirmed", "Cancelled"),
+        defaultValue: "Draft",
+      },
+      grandTotal: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      totalTax: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
+      },
+      totalAmount: {
+        type: DataTypes.DECIMAL(15, 2),
+        defaultValue: 0,
       },
     },
     {
@@ -49,6 +66,14 @@ export default (sequelize, DataTypes) => {
       timestamps: true,
     }
   );
+
+  ReturnMaterial.associate = (models) => {
+    ReturnMaterial.hasMany(models.ReturnMaterialItem, {
+      foreignKey: "returnMaterialId",
+      as: "items",
+      onDelete: "CASCADE",
+    });
+  };
 
   return ReturnMaterial;
 };

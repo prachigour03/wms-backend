@@ -1,99 +1,103 @@
 import db from "../../../../models/index.js";
 
-const { VendorIssueMaterial } = db;
+const { VendorIssueMaterial, VendorIssueMaterialItem, sequelize } = db;
 
-/**
- * CREATE Vendor Issue Material
- */
 export const createVendorIssueMaterial = async (req, res) => {
-  const {
-    issueNo,
-    issueDate,
-    vendorName,
-    materialName,
-    quantity,
-    unit,
-    status,
-    workOrder,
-    customer,
-    issuedBy,
-  } = req.body || {};
-
-  if (!issueNo || !issueDate || !vendorName || !materialName || quantity == null || !unit) {
-    return res.status(400).json({ success: false, message: "All required fields must be provided" });
-  }
-
+  const t = await sequelize.transaction();
   try {
-    const record = await VendorIssueMaterial.create({
-      issueNo,
-      issueDate,
-      vendorName,
-      materialName,
-      quantity,
-      unit,
-      workOrder,
-      customer,
-      issuedBy,
-      status,
-    });
-    res.status(201).json({ success: true, data: record });
-  } catch (error) {
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(409).json({ success: false, message: "Issue number already exists" });
+    const { items, ...headerData } = req.body;
+    const header = await VendorIssueMaterial.create(headerData, { transaction: t });
+    if (items && items.length > 0) {
+      const itemsWithId = items.map(item => ({ ...item, vendorIssueMaterialId: header.id }));
+      await VendorIssueMaterialItem.bulkCreate(itemsWithId, { transaction: t });
     }
+    await t.commit();
+    const result = await VendorIssueMaterial.findByPk(header.id, { include: [{ model: VendorIssueMaterialItem, as: "items" }] });
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    await t.rollback();
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * GET all Vendor Issue Materials
- */
 export const getVendorIssueMaterials = async (req, res) => {
   try {
-    const records = await VendorIssueMaterial.findAll({ order: [["createdAt", "DESC"]] });
-    res.status(200).json({ success: true, data: records });
+    const results = await VendorIssueMaterial.findAll({ order: [["createdAt", "DESC"]] });
+    res.status(200).json({ success: true, data: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * GET by ID
- */
 export const getVendorIssueMaterialById = async (req, res) => {
   try {
-    const record = await VendorIssueMaterial.findByPk(req.params.id);
-    if (!record) return res.status(404).json({ success: false, message: "Record not found" });
-    res.status(200).json({ success: true, data: record });
+    const { id } = req.params;
+    const result = await VendorIssueMaterial.findByPk(id, { include: [{ model: VendorIssueMaterialItem, as: "items" }] });
+    if (!result) return res.status(404).json({ success: false, message: "Not found" });
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * UPDATE
- */
 export const updateVendorIssueMaterial = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
-    const record = await VendorIssueMaterial.findByPk(req.params.id);
-    if (!record) return res.status(404).json({ success: false, message: "Record not found" });
-
-    await record.update(req.body);
-    res.status(200).json({ success: true, data: record });
+    const { id } = req.params;
+    const { items, ...headerData } = req.body;
+    const header = await VendorIssueMaterial.findByPk(id);
+    if (!header || header.status !== "Draft") {
+      await t.rollback();
+      return res.status(400).json({ success: false, message: "Cannot update" });
+    }
+    await header.update(headerData, { transaction: t });
+    if (items) {
+      await VendorIssueMaterialItem.destroy({ where: { vendorIssueMaterialId: id }, transaction: t });
+      if (items.length > 0) {
+        const itemsWithId = items.map(item => ({ ...item, vendorIssueMaterialId: id }));
+        await VendorIssueMaterialItem.bulkCreate(itemsWithId, { transaction: t });
+      }
+    }
+    await t.commit();
+    const result = await VendorIssueMaterial.findByPk(id, { include: [{ model: VendorIssueMaterialItem, as: "items" }] });
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
+    await t.rollback();
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * DELETE
- */
 export const deleteVendorIssueMaterial = async (req, res) => {
   try {
-    const deleted = await VendorIssueMaterial.destroy({ where: { id: req.params.id } });
-    if (!deleted) return res.status(404).json({ success: false, message: "Record not found" });
+    const { id } = req.params;
+    const header = await VendorIssueMaterial.findByPk(id);
+    if (!header || header.status !== "Draft") return res.status(400).json({ success: false, message: "Cannot delete" });
+    await header.destroy();
+    res.status(200).json({ success: true, message: "Deleted" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
-    res.status(200).json({ success: true, message: "Deleted successfully" });
+export const confirmVendorIssueMaterial = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const header = await VendorIssueMaterial.findByPk(id);
+    if (!header || header.status !== "Draft") return res.status(400).json({ success: false, message: "Cannot confirm" });
+    await header.update({ status: "Confirmed" });
+    res.status(200).json({ success: true, message: "Confirmed" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const cancelVendorIssueMaterial = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const header = await VendorIssueMaterial.findByPk(id);
+    if (!header) return res.status(404).json({ success: false, message: "Not found" });
+    await header.update({ status: "Cancelled" });
+    res.status(200).json({ success: true, message: "Cancelled" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
