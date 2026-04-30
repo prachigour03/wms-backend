@@ -22,7 +22,10 @@ export const createVendorIssueMaterial = async (req, res) => {
 
 export const getVendorIssueMaterials = async (req, res) => {
   try {
-    const results = await VendorIssueMaterial.findAll({ order: [["createdAt", "DESC"]] });
+    const results = await VendorIssueMaterial.findAll({ 
+      include: [{ model: VendorIssueMaterialItem, as: "items" }],
+      order: [["createdAt", "DESC"]] 
+    });
     res.status(200).json({ success: true, data: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

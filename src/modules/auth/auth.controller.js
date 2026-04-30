@@ -130,10 +130,10 @@ export const forgotPassword = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    user.otp = otp;
-    user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
-    if (user.otpVerified === undefined) user.otpVerified = false; // safe default
-    await user.save();
+user.otp = otp;
+user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
+user.otpVerified = false; // no need condition
+await user.save();
 
     await sendEmail(user.email, "Password Reset OTP", `Your OTP is ${otp}. Valid for 5 minutes.`);
 

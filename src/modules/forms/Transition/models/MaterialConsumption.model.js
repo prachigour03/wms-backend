@@ -24,6 +24,14 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      type: {
+        type: DataTypes.ENUM("Vendor", "Employee"),
+        defaultValue: "Vendor",
+      },
+      vendorEmployeeName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       subsidiary: {
         type: DataTypes.STRING,
         allowNull: true,

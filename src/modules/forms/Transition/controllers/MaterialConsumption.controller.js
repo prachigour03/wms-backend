@@ -22,7 +22,10 @@ export const createMaterialConsumption = async (req, res) => {
 
 export const getMaterialConsumptions = async (req, res) => {
   try {
-    const results = await MaterialConsumption.findAll({ order: [["createdAt", "DESC"]] });
+    const results = await MaterialConsumption.findAll({ 
+      include: [{ model: MaterialConsumptionItem, as: "items" }],
+      order: [["createdAt", "DESC"]] 
+    });
     res.status(200).json({ success: true, data: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

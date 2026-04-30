@@ -22,7 +22,10 @@ export const createReturnMaterial = async (req, res) => {
 
 export const getReturnMaterials = async (req, res) => {
   try {
-    const results = await ReturnMaterial.findAll({ order: [["createdAt", "DESC"]] });
+    const results = await ReturnMaterial.findAll({ 
+      include: [{ model: ReturnMaterialItem, as: "items" }],
+      order: [["createdAt", "DESC"]] 
+    });
     res.status(200).json({ success: true, data: results });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
